@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared plug-in execution infrastructure: BasePlugin, PluginContext and the declarative
+    registration attributes read by SupportTicket.DeploymentHelper.
+    net462: runs in the Dataverse sandbox as a dependent assembly of the plug-in package.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>SupportTicket.Base</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" />
+    <!-- FaultException<OrganizationServiceFault> -->
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+
+</Project>

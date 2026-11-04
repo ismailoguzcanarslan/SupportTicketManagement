@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Code coverage settings for `dotnet test` (Microsoft Code Coverage, shipped with Microsoft.NET.Test.Sdk). -->
+<RunSettings>
+  <RunConfiguration>
+    <ResultsDirectory>./TestResults</ResultsDirectory>
+  </RunConfiguration>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <CodeCoverage>
+            <ModulePaths>
+              <Exclude>
+                <!-- Measure production code only, not the tests themselves. -->
+                <ModulePath>.*Tests\.dll$</ModulePath>
+              </Exclude>
+            </ModulePaths>
+            <Sources>
+              <Exclude>
+                <!-- Generated early-bound entities are not handwritten code. -->
+                <Source>.*[\\/]GeneratedCode[\\/].*</Source>
+              </Exclude>
+            </Sources>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

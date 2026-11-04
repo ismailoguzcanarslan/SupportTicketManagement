@@ -1,0 +1,9 @@
+{
+  // Type checks the tests together with the sources they use. Named tsconfig.json (not
+  // tsconfig.test.json) so editors such as Visual Studio pick it up for every file in test/.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["./**/*", "../src/**/*"]
+}

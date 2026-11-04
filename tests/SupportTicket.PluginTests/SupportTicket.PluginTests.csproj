@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- net462 so tests compile against exactly the same framework surface as the plug-ins. -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>SupportTicket.PluginTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Plugins references its dependencies privately (they ship inside its package), so list them here too. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\dataverse\SupportTicket.Base\SupportTicket.Base.csproj" />
+    <ProjectReference Include="..\..\src\dataverse\SupportTicket.BusinessLogic\SupportTicket.BusinessLogic.csproj" />
+    <ProjectReference Include="..\..\src\dataverse\SupportTicket.Entities\SupportTicket.Entities.csproj" />
+    <ProjectReference Include="..\..\src\dataverse\SupportTicket.Plugins\SupportTicket.Plugins.csproj" />
+  </ItemGroup>
+
+</Project>

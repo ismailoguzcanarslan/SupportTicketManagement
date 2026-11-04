@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dataverse plug-in entry points, deployed as a plug-in package (dependent assemblies).
+    Building this project also publishes it and produces bin\<Configuration>\ogz_SupportTicketPlugins.<Version>.nupkg,
+    which contains SupportTicket.Plugins.dll plus its dependent assemblies (Base, BusinessLogic, Entities).
+    net462 is the only target framework supported by the Dataverse sandbox. Do not add
+    dependencies that require a newer framework.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>SupportTicket.Plugins</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Plug-in package">
+    <!-- Must start with the publisher prefix; used as the pluginpackage name and unique name. -->
+    <PackageId>ogz_SupportTicketPlugins</PackageId>
+    <!--
+      Never change: Dataverse does not allow changing a plug-in package's version after it is created.
+      Updates replace the package content; DeploymentHelper blocks an update with a different version.
+    -->
+    <Version>1.0.0</Version>
+    <!-- AssemblyVersion is fixed in src/dataverse/Directory.Build.props. Change FileVersion to identify a build. -->
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>OguzLabs</Authors>
+    <Description>Support Ticket Management plug-ins.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.PowerApps.MSBuild.Plugin" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- PrivateAssets: the DLLs ship inside this package, so they are not separate NuGet dependencies. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SupportTicket.Base\SupportTicket.Base.csproj" PrivateAssets="All" />
+    <ProjectReference Include="..\SupportTicket.BusinessLogic\SupportTicket.BusinessLogic.csproj" PrivateAssets="All" />
+    <ProjectReference Include="..\SupportTicket.Entities\SupportTicket.Entities.csproj" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!--
+    The plug-in build packs everything in the publish folder, which includes the Dataverse SDK's own
+    dependencies (System.Text.Json, System.Memory, ...). The sandbox already provides those; shipping
+    our own copies risks version conflicts. Keep only this repository's assemblies in the package.
+  -->
+  <!--
+    NuGet's pack is incremental, but with the plug-in build it only tracks the project file, so a
+    code-only change left the .nupkg stale. Track the published assemblies too (after publishing).
+  -->
+  <Target Name="OgzRepackWhenAssembliesChange" BeforeTargets="GenerateNuspec" DependsOnTargets="Publish">
+    <ItemGroup>
+      <NuGetPackInput Include="$(PublishDir)SupportTicket.*.dll" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="OgzKeepOnlyOwnAssembliesInPackage" AfterTargets="GetTfmPublishedFiles">
+    <ItemGroup>
+      <BuildOutputInPackage Remove="@(BuildOutputInPackage)"
+                            Condition="'%(Extension)' != '.dll' Or !$([System.String]::Copy('%(Filename)').StartsWith('SupportTicket.'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

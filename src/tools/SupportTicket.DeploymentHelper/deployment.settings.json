@@ -1,0 +1,6 @@
+{
+  "targetEnvironment": "DEV",
+  "solutionUniqueName": "OguzLabsSupportTicketManagement",
+  "publisherPrefix": "ogz",
+  "manifest": "deployment.manifest.json"
+}

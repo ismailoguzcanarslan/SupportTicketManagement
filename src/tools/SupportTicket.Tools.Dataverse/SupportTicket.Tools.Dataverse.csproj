@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dataverse connection code shared by the developer tools (EntityGenerator, DeploymentHelper).
+    Settings come from OGZ_DATAVERSE_* environment variables; nothing secret is stored in files.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SupportTicket.Tools.Dataverse</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" />
+  </ItemGroup>
+
+</Project>

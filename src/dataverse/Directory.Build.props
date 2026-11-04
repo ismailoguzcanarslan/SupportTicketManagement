@@ -1,0 +1,23 @@
+<Project>
+  <!-- Settings for the assemblies that run in the Dataverse sandbox. Imports the repository-wide props. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
+    Version policy for plug-in package assemblies:
+    - AssemblyVersion stays 1.0.0.0. Dataverse does not need it to change (versions are "not a factor in
+      any upgrade behaviors"), and a fixed identity avoids binding mismatches between the unsigned
+      assemblies of the package.
+    - The plug-in package <Version> (SupportTicket.Plugins.csproj) can never change after the package
+      is created in Dataverse; DeploymentHelper blocks an update with a different version.
+    - FileVersion / InformationalVersion may change freely to identify a build.
+  -->
+  <PropertyGroup>
+    <OgzPluginAssemblyVersion>1.0.0.0</OgzPluginAssemblyVersion>
+    <AssemblyVersion>$(OgzPluginAssemblyVersion)</AssemblyVersion>
+  </PropertyGroup>
+
+  <Target Name="OgzCheckAssemblyVersion" BeforeTargets="CoreCompile">
+    <Error Condition="'$(AssemblyVersion)' != '$(OgzPluginAssemblyVersion)'"
+           Text="$(MSBuildProjectName): AssemblyVersion must stay $(OgzPluginAssemblyVersion) (see src/dataverse/Directory.Build.props). Change FileVersion to identify a build instead." />
+  </Target>
+</Project>

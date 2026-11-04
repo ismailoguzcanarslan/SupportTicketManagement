@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Generated Dataverse early-bound entities.
+    net462: must match SupportTicket.Plugins, which runs in the Dataverse sandbox (.NET Framework 4.6.2).
+    All C# code lives under GeneratedCode/ and is produced by `pac modelbuilder build`; do not edit by hand.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>SupportTicket.Entities</RootNamespace>
+    <!-- Generated code does not carry nullable annotations. -->
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="GeneratedCode\OptionSets\" />
+  </ItemGroup>
+
+</Project>

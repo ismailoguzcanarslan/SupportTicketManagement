@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Developer tool: reads Dataverse metadata and writes generated TypeScript and C# entity code.
+    Runs on the developer machine / build agent only, never inside Dataverse, so it uses the
+    current .NET LTS rather than the plug-in sandbox framework.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SupportTicket.EntityGenerator</RootNamespace>
+    <UserSecretsId>support-ticket-entity-generator</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="generator.settings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets tests exercise internal mapping/rendering types without making them public. -->
+    <InternalsVisibleTo Include="SupportTicket.EntityGeneratorTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SupportTicket.Tools.Dataverse\SupportTicket.Tools.Dataverse.csproj" />
+  </ItemGroup>
+
+</Project>

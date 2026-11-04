@@ -1,0 +1,39 @@
+{
+  "webResources": [
+    {
+      "name": "ogz_/forms/account.js",
+      "file": "src/frontend/crm-client/dist/webresources/forms/account.js",
+      "displayName": "Account form script"
+    },
+    {
+      "name": "ogz_/forms/supportTicket.js",
+      "file": "src/frontend/crm-client/dist/webresources/forms/supportTicket.js",
+      "displayName": "Support Ticket form script"
+    }
+  ],
+  "forms": [
+    {
+      "entity": "ogz_support_ticket",
+      "formType": "main",
+      "library": "ogz_/forms/supportTicket.js",
+      "events": [
+        { "event": "onload", "function": "Ogz.Forms.SupportTicket.onLoad", "passExecutionContext": true },
+        { "event": "onsave", "function": "Ogz.Forms.SupportTicket.onSave", "passExecutionContext": true }
+      ]
+    },
+    {
+      "entity": "account",
+      "formType": "main",
+      "library": "ogz_/forms/account.js",
+      "events": [
+        { "event": "onload", "function": "Ogz.Forms.Account.onLoad", "passExecutionContext": true },
+        { "event": "onsave", "function": "Ogz.Forms.Account.onSave", "passExecutionContext": true }
+      ]
+    }
+  ],
+  "plugins": {
+    "packageId": "ogz_SupportTicketPlugins",
+    "assembly": "src/dataverse/SupportTicket.Plugins/bin/Release/net462/SupportTicket.Plugins.dll",
+    "packageDirectory": "src/dataverse/SupportTicket.Plugins/bin/Release"
+  }
+}

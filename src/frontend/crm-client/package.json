@@ -1,0 +1,24 @@
+{
+  "name": "@ogz/crm-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript sources for Dynamics 365 Model-driven App Web Resources (form events and command bar actions).",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "build": "tsc -p tsconfig.json && node build.mjs",
+    "build:dev": "tsc -p tsconfig.json && node build.mjs --dev",
+    "watch": "node build.mjs --dev --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@ogz/crm-entities": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/xrm": "^9.0.97",
+    "esbuild": "~0.28.2"
+  }
+}

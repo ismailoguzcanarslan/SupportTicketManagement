@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Business rules, independent of plug-in registration and execution infrastructure.
+    net462: runs in the Dataverse sandbox as a dependent assembly of the plug-in package.
+    Deliberately does not reference SupportTicket.Base.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>SupportTicket.BusinessLogic</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SupportTicket.Entities\SupportTicket.Entities.csproj" />
+  </ItemGroup>
+
+</Project>

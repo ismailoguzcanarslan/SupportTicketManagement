@@ -1,0 +1,11 @@
+<Project>
+  <!-- Shared settings for every .NET project in the repository. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <Company>OguzLabs</Company>
+    <Product>Support Ticket Management</Product>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

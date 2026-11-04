@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk">
+
+  <!--
+    Visual Studio project for an existing npm workspace package. It only surfaces the package in
+    Solution Explorer and runs its own npm scripts; package.json and tsconfig.json stay the source of truth.
+    All files in the folder are included automatically.
+  -->
+  <PropertyGroup>
+    <!-- npm workspaces: dependencies are installed once at the repository root with `npm install`. -->
+    <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+    <BuildCommand>npm run build</BuildCommand>
+    <CleanCommand>npm run clean</CleanCommand>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+    <!-- Build output is not source; keep it out of Solution Explorer. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);dist\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

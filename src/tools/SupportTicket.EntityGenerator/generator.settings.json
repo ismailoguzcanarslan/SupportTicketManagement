@@ -1,0 +1,36 @@
+{
+  "solutionUniqueName": "OguzLabsSupportTicketManagement",
+  "publisherPrefix": "ogz",
+  "generation": {
+    "frontend": {
+      "enabled": true,
+      "tables": [
+        "ogz_support_ticket",
+        "ogz_ticket_category",
+        "account",
+        "contact",
+        "systemuser"
+      ],
+      "includeChoices": true,
+      "includeRelationships": true
+    },
+    "backend": {
+      "enabled": true,
+      "scope": "solution",
+      "includeTables": [
+        "account",
+        "contact",
+        "systemuser"
+      ],
+      "includeGlobalChoices": true,
+      "includeOptionSets": true,
+      "includeRelationships": true
+    }
+
+  },
+  "output": {
+    "typeScript": "../../frontend/crm-entities/src/generated",
+    "cSharp": "../../dataverse/SupportTicket.Entities/GeneratedCode",
+    "cSharpNamespace": "SupportTicket.Entities"
+  }
+}
