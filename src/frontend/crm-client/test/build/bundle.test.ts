@@ -118,7 +118,14 @@ describe("Web Resource bundles", () => {
   it("takes a folder's index.ts as the entry point, with the same output and global as a file", () => {
     expect(supportTicket.entryPoint.replace(/\\/g, "/")).toMatch(/\/src\/forms\/supportTicket\/index\.ts$/);
     expect(supportTicket.outfile.replace(/\\/g, "/")).toMatch(/\/dist\/webresources\/forms\/supportTicket\.js$/);
-    expect(entries.map((e) => e.globalName)).toEqual(["Ogz.Forms.Account", "Ogz.Forms.SupportTicket"]);
+    expect(entries.map((e) => e.globalName)).toEqual(["Ogz.Forms.Account", "Ogz.Forms.SupportTicket", "Ogz.Commands.SupportTicket"]);
+  });
+
+  it("bundles a command folder to dist/webresources/commands under Ogz.Commands", () => {
+    const commands = entries.find((e) => e.globalName === "Ogz.Commands.SupportTicket")!;
+
+    expect(commands.entryPoint.replace(/\\/g, "/")).toMatch(/\/src\/commands\/supportTicket\/index\.ts$/);
+    expect(commands.outfile.replace(/\\/g, "/")).toMatch(/\/dist\/webresources\/commands\/supportTicket\.js$/);
   });
 
   it("refuses a file and a folder that would both produce the same bundle", () => {
