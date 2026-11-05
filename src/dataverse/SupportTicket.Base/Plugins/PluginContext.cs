@@ -116,6 +116,31 @@ public sealed class PluginContext
         return new EntityChange<T>(MessageName, logicalName, id, target, preImage, retrieve);
     }
 
+    /// <summary>
+    /// Value of a request parameter (Custom API, Custom Action), or default when it was not passed.
+    /// Optional Custom API parameters are left out of InputParameters when the caller omits them.
+    /// </summary>
+    public T? GetInput<T>(string name) =>
+        InputParameters.TryGetValue(name, out var value) && value is T typed ? typed : default;
+
+    /// <summary>
+    /// Value of a request parameter that must be passed. Throws a user-facing error naming the parameter
+    /// when it is missing or empty, so a wrong call fails with a clear message.
+    /// </summary>
+    public T GetRequiredInput<T>(string name)
+    {
+        if (InputParameters.TryGetValue(name, out var value) && value is T typed
+            && !(typed is string text && string.IsNullOrWhiteSpace(text)))
+        {
+            return typed;
+        }
+
+        throw new InvalidPluginExecutionException($"{MessageName}: required parameter '{name}' is missing.");
+    }
+
+    /// <summary>Sets a response property (Custom API) or output parameter.</summary>
+    public void SetOutput(string name, object? value) => OutputParameters[name] = value;
+
     public void Trace(string format, params object[] args) => TracingService.Trace(format, args);
 
     private static T GetRequiredService<T>(IServiceProvider serviceProvider)

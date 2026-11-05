@@ -46,6 +46,10 @@ export function createXrmMock(globalContext: Xrm.GlobalContext = createGlobalCon
       updateRecord: vi.fn((entityLogicalName: string, id: string) => Promise.resolve({ entityType: entityLogicalName, id })),
       deleteRecord: vi.fn((entityLogicalName: string, id: string) => Promise.resolve({ entityType: entityLogicalName, id })),
       isAvailableOffline: vi.fn(() => false),
+      // Custom API / action calls. Default: 204 No Content (an action without response properties).
+      online: {
+        execute: vi.fn(() => Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve({}) })),
+      },
     },
     Navigation: {
       openAlertDialog: vi.fn(() => Promise.resolve()),

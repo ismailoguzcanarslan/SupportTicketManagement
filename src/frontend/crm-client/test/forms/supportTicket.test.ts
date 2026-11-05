@@ -183,7 +183,9 @@ describe("Support Ticket form: OnLoad and event handling", () => {
     change(formContext, Fields.ogz_category, [HARDWARE]);
     change(formContext, Fields.statuscode, Status.Resolved);
 
-    for (const operation of Object.values(xrm.WebApi)) expect(operation).not.toHaveBeenCalled();
+    const { online, ...operations } = xrm.WebApi;
+    for (const operation of Object.values(operations)) expect(operation).not.toHaveBeenCalled();
+    expect(online.execute).not.toHaveBeenCalled();
     expect(formContext.getAttribute(Fields.ogz_description)!.setValue).not.toHaveBeenCalled();
     expect(formContext.getAttribute(Fields.ogz_ticket_title)!.setValue).not.toHaveBeenCalled();
     expect(formContext.data.save).not.toHaveBeenCalled();

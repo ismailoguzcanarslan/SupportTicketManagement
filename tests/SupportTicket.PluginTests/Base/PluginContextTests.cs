@@ -161,6 +161,53 @@ public class PluginContextTests
     }
 
     [Fact]
+    public void GetInput_ReturnsTheParameterOrDefault()
+    {
+        var test = new PluginTestContext("ogz_SomeApi", PluginStage.PostOperation, ogz_support_ticket.EntityLogicalName);
+        test.ExecutionContext.InputParameters["Reason"] = "Customer called back";
+        test.ExecutionContext.InputParameters["Count"] = 3;
+        var context = new PluginContext(test.ServiceProvider);
+
+        Assert.Equal("Customer called back", context.GetInput<string>("Reason"));
+        Assert.Equal(3, context.GetInput<int>("Count"));
+        Assert.Null(context.GetInput<string>("Missing"));
+        Assert.Equal(0, context.GetInput<int>("Reason"));
+    }
+
+    [Fact]
+    public void GetRequiredInput_ReturnsThePassedParameter()
+    {
+        var test = new PluginTestContext("ogz_SomeApi", PluginStage.PostOperation, ogz_support_ticket.EntityLogicalName);
+        test.ExecutionContext.InputParameters["Reason"] = "Customer called back";
+
+        Assert.Equal("Customer called back", new PluginContext(test.ServiceProvider).GetRequiredInput<string>("Reason"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void GetRequiredInput_NamesTheParameterWhenItIsMissingOrEmpty(string? value)
+    {
+        var test = new PluginTestContext("ogz_SomeApi", PluginStage.PostOperation, ogz_support_ticket.EntityLogicalName);
+        if (value is not null) test.ExecutionContext.InputParameters["Reason"] = value;
+
+        var thrown = Assert.Throws<InvalidPluginExecutionException>(
+            () => new PluginContext(test.ServiceProvider).GetRequiredInput<string>("Reason"));
+
+        Assert.Equal("ogz_SomeApi: required parameter 'Reason' is missing.", thrown.Message);
+    }
+
+    [Fact]
+    public void SetOutput_WritesTheResponseProperty()
+    {
+        var test = new PluginTestContext("ogz_SomeApi", PluginStage.PostOperation, ogz_support_ticket.EntityLogicalName);
+
+        new PluginContext(test.ServiceProvider).SetOutput("Result", 42);
+
+        Assert.Equal(42, test.ExecutionContext.OutputParameters["Result"]);
+    }
+
+    [Fact]
     public void OrganizationServices_AreCreatedLazilyForUserAndSystem()
     {
         var test = new PluginTestContext(MessageName.Create, PluginStage.PreOperation, ogz_support_ticket.EntityLogicalName);
