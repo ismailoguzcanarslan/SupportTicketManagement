@@ -9,6 +9,11 @@
       "name": "ogz_/forms/supportTicket.js",
       "file": "src/frontend/crm-client/dist/webresources/forms/supportTicket.js",
       "displayName": "Support Ticket form script"
+    },
+    {
+      "name": "ogz_/commands/supportTicket.js",
+      "file": "src/frontend/crm-client/dist/webresources/commands/supportTicket.js",
+      "displayName": "Support Ticket command bar script"
     }
   ],
   "forms": [
