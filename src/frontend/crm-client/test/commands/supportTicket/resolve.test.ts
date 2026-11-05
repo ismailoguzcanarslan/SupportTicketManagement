@@ -44,16 +44,16 @@ function setup(options: { stored?: object; confirmed?: boolean; entityId?: strin
 
 describe("Ogz.Commands.SupportTicket.resolve", () => {
   it("exposes the Support Ticket commands", () => {
-    expect(Object.keys(SupportTicketCommands)).toEqual(["resolve"]);
+    expect(Object.keys(SupportTicketCommands).sort()).toEqual(["reopen", "resolve"]);
   });
 
   it("resolves: reads the stored record, asks, writes statecode and statuscode together, refreshes", async () => {
     const { xrm, formContext } = setup();
 
-    expect(await SupportTicketCommands.resolve(formContext)).toBe("resolved");
+    expect(await SupportTicketCommands.resolve(formContext)).toBe("done");
 
     expect(xrm.WebApi.retrieveRecord).toHaveBeenCalledWith("ogz_support_ticket", ID, "?$select=statecode,ogz_description");
-    expect(xrm.Navigation.openConfirmDialog).toHaveBeenCalledWith({ text: ResolveTexts.confirm, title: ResolveTexts.confirmTitle });
+    expect(xrm.Navigation.openConfirmDialog).toHaveBeenCalledWith({ text: ResolveTexts.confirm, title: ResolveTexts.title });
     expect(xrm.WebApi.updateRecord).toHaveBeenCalledWith("ogz_support_ticket", ID, { statecode: 1, statuscode: 2 });
     expect(formContext.data.refresh).toHaveBeenCalledWith(false);
     expect(xrm.Utility.showProgressIndicator).toHaveBeenCalledWith(ResolveTexts.progress);
@@ -69,7 +69,7 @@ describe("Ogz.Commands.SupportTicket.resolve", () => {
 
     expect(await SupportTicketCommands.resolve(formContext)).toBe("blocked");
 
-    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: ResolveMessages.notSaved, title: ResolveTexts.confirmTitle });
+    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: ResolveMessages.notSaved, title: ResolveTexts.title });
     expect(xrm.WebApi.retrieveRecord).not.toHaveBeenCalled();
   });
 
@@ -78,7 +78,7 @@ describe("Ogz.Commands.SupportTicket.resolve", () => {
 
     expect(await SupportTicketCommands.resolve(formContext)).toBe("blocked");
 
-    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: ResolveTexts.unsavedChanges, title: ResolveTexts.confirmTitle });
+    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: ResolveTexts.unsavedChanges, title: ResolveTexts.title });
     expect(xrm.WebApi.retrieveRecord).not.toHaveBeenCalled();
   });
 
@@ -90,7 +90,7 @@ describe("Ogz.Commands.SupportTicket.resolve", () => {
 
     expect(await SupportTicketCommands.resolve(formContext)).toBe("blocked");
 
-    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: message, title: ResolveTexts.confirmTitle });
+    expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: message, title: ResolveTexts.title });
     expect(xrm.Navigation.openConfirmDialog).not.toHaveBeenCalled();
     expect(xrm.WebApi.updateRecord).not.toHaveBeenCalled();
   });

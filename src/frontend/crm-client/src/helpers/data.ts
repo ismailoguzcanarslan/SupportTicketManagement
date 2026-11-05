@@ -33,4 +33,9 @@ export const Data = {
   async delete(entityLogicalName: string, id: string): Promise<void> {
     await toPromise(getXrm().WebApi.deleteRecord(entityLogicalName, normalizeId(id)));
   },
+
+  /** Runs an action, function or Custom API request (an object with getMetadata()); see CustomApiService. */
+  execute(request: object): Promise<Xrm.ExecuteResponse> {
+    return toPromise(getXrm().WebApi.online.execute(request));
+  },
 } as const;
