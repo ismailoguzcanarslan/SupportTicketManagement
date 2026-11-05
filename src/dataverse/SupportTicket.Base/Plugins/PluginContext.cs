@@ -1,5 +1,8 @@
 using System;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
+using SupportTicket.Base.Changes;
+using SupportTicket.Base.Registration;
 
 namespace SupportTicket.Base.Plugins;
 
@@ -46,6 +49,16 @@ public sealed class PluginContext
 
     public Guid CorrelationId => ExecutionContext.CorrelationId;
 
+    /// <summary>Id of the record the message runs on; <see cref="Guid.Empty"/> before a Create saves it.</summary>
+    public Guid PrimaryEntityId => ExecutionContext.PrimaryEntityId;
+
+    /// <summary>
+    /// True when this execution was triggered more than <paramref name="maxDepth"/> levels deep, e.g. by a
+    /// plug-in that updated the record again. <c>if (context.IsDepthAbove(1)) return;</c> stops a step from
+    /// reacting to its own writes.
+    /// </summary>
+    public bool IsDepthAbove(int maxDepth) => Depth > maxDepth;
+
     public ParameterCollection InputParameters => ExecutionContext.InputParameters;
 
     public ParameterCollection OutputParameters => ExecutionContext.OutputParameters;
@@ -79,6 +92,29 @@ public sealed class PluginContext
     public T? GetPostImage<T>(string name)
         where T : Entity =>
         ExecutionContext.PostEntityImages.TryGetValue(name, out var image) ? image.ToEntity<T>() : null;
+
+    /// <summary>
+    /// The record of this execution as an <see cref="EntityChange{T}"/>: the Target, the pre-image
+    /// <paramref name="preImageName"/> (if registered) and both merged. Its <c>EnsureColumns</c> reads missing
+    /// columns with <see cref="OrganizationService"/>, except before a Create has saved the record.
+    /// </summary>
+    public EntityChange<T> GetChange<T>(string preImageName = ImageNames.PreImage)
+        where T : Entity
+    {
+        var target = Target;
+        var preImage = ExecutionContext.PreEntityImages.TryGetValue(preImageName, out var image) ? image : null;
+        var logicalName = target?.LogicalName ?? TargetReference?.LogicalName ?? PrimaryEntityName;
+        var id = target?.Id is { } targetId && targetId != Guid.Empty
+            ? targetId
+            : TargetReference?.Id ?? PrimaryEntityId;
+
+        var recordExists = MessageName != Registration.MessageName.Create || Stage >= (int)PluginStage.PostOperation;
+        Func<string[], Entity?>? retrieve = recordExists
+            ? columns => OrganizationService.Retrieve(logicalName, id, new ColumnSet(columns))
+            : null;
+
+        return new EntityChange<T>(MessageName, logicalName, id, target, preImage, retrieve);
+    }
 
     public void Trace(string format, params object[] args) => TracingService.Trace(format, args);
 
