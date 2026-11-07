@@ -1,0 +1,22 @@
+{
+  "name": "@ogz/crm-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared React + Fluent UI 2 building blocks for Dataverse pages (dialog web resources, later a code app), and the dialog protocol used by form scripts.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./protocol": "./src/protocol/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fluentui/react-components": "9.75.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

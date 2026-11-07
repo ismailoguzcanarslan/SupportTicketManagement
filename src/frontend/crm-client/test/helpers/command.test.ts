@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { DialogResult } from "@ogz/crm-ui/protocol";
 import { type RecordCommand, runRecordCommand } from "../../src/helpers/command.js";
 import { createFormContextMock, installXrmMock } from "../mocks/index.js";
 
@@ -107,5 +108,54 @@ describe("runRecordCommand", () => {
 
     expect(xrm.Navigation.openErrorDialog).toHaveBeenCalledWith({ message: "It failed.", details: "Record not found." });
     expect(cmd.execute).not.toHaveBeenCalled();
+  });
+});
+
+describe("runRecordCommand with a dialog", () => {
+  const dialogCommand = (result: DialogResult<unknown>) =>
+    ({
+      texts: { title: "Do It", notSaved: "Save first.", unsavedChanges: "Save your changes first.", failed: "It failed." },
+      read: vi.fn((_id: string) => Promise.resolve({ stored: true })),
+      check: vi.fn(() => null),
+      dialog: vi.fn((_id: string, _stored: { stored: boolean }) => Promise.resolve(result)),
+    }) satisfies RecordCommand<{ stored: boolean }>;
+
+  it("opens the dialog instead of asking, and refreshes when it succeeded", async () => {
+    const { xrm, formContext } = setup();
+    const cmd = dialogCommand({ status: "succeeded", value: 1 });
+
+    expect(await runRecordCommand(formContext, cmd)).toBe("done");
+
+    expect(cmd.dialog).toHaveBeenCalledWith(ID, { stored: true });
+    expect(xrm.Navigation.openConfirmDialog).not.toHaveBeenCalled();
+    expect(xrm.Utility.showProgressIndicator).not.toHaveBeenCalled();
+    expect(formContext.data.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("changes nothing when the dialog was cancelled", async () => {
+    const { formContext } = setup();
+
+    expect(await runRecordCommand(formContext, dialogCommand({ status: "cancelled" }))).toBe("cancelled");
+    expect(formContext.data.refresh).not.toHaveBeenCalled();
+  });
+
+  it("shows the error of a failed dialog", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { xrm, formContext } = setup();
+
+    expect(await runRecordCommand(formContext, dialogCommand({ status: "failed", error: "Could not open." }))).toBe("failed");
+    expect(xrm.Navigation.openErrorDialog).toHaveBeenCalledWith({ message: "It failed.", details: "Could not open." });
+  });
+});
+
+describe("runRecordCommand without confirm and progress texts", () => {
+  it("uses the title for both", async () => {
+    const { xrm, formContext } = setup();
+    const cmd = command();
+
+    await runRecordCommand(formContext, { ...cmd, texts: { title: "Do It", notSaved: "n", unsavedChanges: "u", failed: "f" } });
+
+    expect(xrm.Navigation.openConfirmDialog).toHaveBeenCalledWith({ text: "Do It", title: "Do It" });
+    expect(xrm.Utility.showProgressIndicator).toHaveBeenCalledWith("Do It");
   });
 });

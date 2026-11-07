@@ -4,14 +4,16 @@
   "description": "Support Ticket Management System on Microsoft Dataverse (monorepo root).",
   "workspaces": [
     "src/frontend/crm-entities",
-    "src/frontend/crm-client"
+    "src/frontend/crm-ui",
+    "src/frontend/crm-client",
+    "src/frontend/crm-pages"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run build -w @ogz/crm-entities && npm run build -w @ogz/crm-client",
-    "build:dev": "npm run build -w @ogz/crm-entities && npm run build:dev -w @ogz/crm-client",
+    "build": "npm run build -w @ogz/crm-entities && npm run build -w @ogz/crm-client && npm run build -w @ogz/crm-pages",
+    "build:dev": "npm run build -w @ogz/crm-entities && npm run build:dev -w @ogz/crm-client && npm run build:dev -w @ogz/crm-pages",
     "typecheck": "npm run build -w @ogz/crm-entities && npm run typecheck --workspaces",
     "test": "npm run build -w @ogz/crm-entities && vitest run",
     "test:watch": "vitest",
@@ -20,9 +22,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "@vitest/coverage-v8": "~4.1.12",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
+    "jsdom": "^31.0.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "~4.1.12"
