@@ -51,6 +51,10 @@ export interface AttributeMockOptions {
   submitMode?: Xrm.SubmitMode;
   /** Label of the control created for the attribute on the form (default: the column name). */
   label?: string;
+  /** Choice columns: the options of the column. Adds getOptions/getText and option methods on its controls. */
+  options?: Xrm.OptionSetValue[];
+  /** Options of the control created for the attribute on the form, e.g. { lookup: true }. */
+  control?: Omit<ControlMockOptions, "attribute" | "label">;
 }
 
 // Lets an attribute build the event context for its OnChange handlers once it joins a form.
@@ -97,6 +101,16 @@ export function createAttributeMock(name: string, options: AttributeMockOptions 
       for (const handler of [...handlers]) handler(eventContext);
     }),
     controls: createItemCollectionMock(controls, (control) => control.getName()),
+    ...(options.options === undefined
+      ? {}
+      : {
+          getOptions: vi.fn(() => [...options.options!]),
+          getText: vi.fn(() => {
+            const label = (selected: unknown) => options.options!.find((option) => option.value === selected)?.text ?? "";
+            if (value === null) return null;
+            return Array.isArray(value) ? value.map(label) : label(value);
+          }),
+        }),
   };
 
   attributeControls.set(attribute, controls);
@@ -115,6 +129,56 @@ export interface ControlMockOptions {
   disabled?: boolean;
   /** False simulates a control without addNotification (only setNotification). Default true. */
   addNotification?: boolean;
+  /** Adds the lookup control methods (PreSearch, custom filter, default view). */
+  lookup?: boolean;
+  /** Adds the subgrid control methods; getGrid().getTotalRecordCount() returns recordCount. */
+  grid?: { recordCount: number };
+}
+
+/** Option methods for a control of a choice column; `offeredOptions` is the list the user can pick from. */
+function choiceControlMembers(attribute: Xrm.Attributes.Attribute | undefined): object {
+  const getOptions = (attribute as Partial<Xrm.Attributes.OptionSetAttribute> | undefined)?.getOptions;
+  if (getOptions === undefined) return {};
+
+  const offeredOptions: Xrm.OptionSetValue[] = [...getOptions()];
+  return {
+    clearOptions: vi.fn(() => {
+      offeredOptions.length = 0;
+    }),
+    addOption: vi.fn((option: Xrm.OptionSetValue) => {
+      offeredOptions.push(option);
+    }),
+    removeOption: vi.fn((value: number) => {
+      const index = offeredOptions.findIndex((option) => option.value === value);
+      if (index >= 0) offeredOptions.splice(index, 1);
+    }),
+    /** Test helper (not part of the Client API): the options the user can pick from. */
+    offeredOptions,
+  };
+}
+
+/**
+ * Lookup control methods. `runPreSearch()` (test helper) simulates the user opening the search: it runs
+ * the PreSearch handlers and returns the custom filters they added.
+ */
+function lookupControlMembers(): object {
+  const preSearchHandlers: (() => void)[] = [];
+  const customFilters: { filter: string; entityType: string | undefined }[] = [];
+  return {
+    addPreSearch: vi.fn((handler: () => void) => {
+      preSearchHandlers.push(handler);
+    }),
+    addCustomFilter: vi.fn((filter: string, entityType?: string) => {
+      customFilters.push({ filter, entityType });
+    }),
+    setDefaultView: vi.fn(),
+    preSearchHandlers,
+    runPreSearch: () => {
+      customFilters.length = 0;
+      preSearchHandlers.forEach((handler) => handler());
+      return [...customFilters];
+    },
+  };
 }
 
 export function createControlMock(name: string, options: ControlMockOptions = {}): Xrm.Controls.StandardControl {
@@ -165,6 +229,14 @@ export function createControlMock(name: string, options: ControlMockOptions = {}
       return true;
     }),
     setFocus: vi.fn(),
+    ...choiceControlMembers(options.attribute),
+    ...(options.lookup === true ? lookupControlMembers() : {}),
+    ...(options.grid === undefined
+      ? {}
+      : {
+          refresh: vi.fn(),
+          getGrid: vi.fn(() => ({ getTotalRecordCount: vi.fn(() => options.grid!.recordCount) })),
+        }),
     /** Test helper (not part of the Client API): current notifications keyed by unique id. */
     notifications,
     /** Test helper (not part of the Client API): level of each current notification. */
@@ -218,8 +290,8 @@ export function createFormContextMock(options: FormContextMockOptions = {}): Xrm
 
   const controlsByName = new Map<string, Xrm.Controls.StandardControl>();
   for (const attribute of attributes) {
-    const label = options.attributes?.[attribute.getName()]?.label;
-    const control = createControlMock(attribute.getName(), label === undefined ? { attribute } : { attribute, label });
+    const { label, control: controlOptions } = options.attributes?.[attribute.getName()] ?? {};
+    const control = createControlMock(attribute.getName(), { ...controlOptions, attribute, ...(label === undefined ? {} : { label }) });
     controlsByName.set(attribute.getName(), control);
     attributeControls.get(attribute)?.push(control);
   }
@@ -245,8 +317,14 @@ export function createFormContextMock(options: FormContextMockOptions = {}): Xrm
         ),
       }) as unknown as Xrm.Controls.Section,
     );
+    let displayState: Xrm.DisplayState = "expanded";
     return createVisibilityMock(tabName, tab.visible ?? true, {
       sections: createItemCollectionMock(sections, (section) => section.getName()),
+      getDisplayState: vi.fn(() => displayState),
+      setDisplayState: vi.fn((state: Xrm.DisplayState) => {
+        displayState = state;
+      }),
+      setFocus: vi.fn(),
     }) as unknown as Xrm.Controls.Tab;
   });
 
