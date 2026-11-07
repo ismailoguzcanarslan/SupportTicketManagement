@@ -15,6 +15,7 @@ export {
   MinTextLengthRule,
   NotWhitespaceRule,
   RequiredWhenRule,
+  SaveMode,
   valid,
   type SaveRule,
   type SaveRuleSeverity,
