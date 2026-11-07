@@ -6,14 +6,37 @@ TypeScript sources for the Support Agent Model-driven App's JavaScript Web Resou
 | --- | --- |
 | `src/forms/<table>/` | One folder per form: `index.ts` (bundle entry, exports `onLoad`/`onSave`), `onLoad.ts`, `onSave.ts`, and `rules/formRules.ts` + `rules/saveRules.ts` with the table's rules. |
 | `src/rules/` | Generic rule engine: form rules (`FormRule`, `Rules`, `FormRules`) and save checks (`SaveRule`, `SaveRules`). No table or field names. |
-| `src/helpers/` | `XrmHelper`: Data, Form, App, Field, Control, Lookup, Tab, Section, Event, UI. |
-| `src/services/` | Web API access: `EntityService<T>("table")` on top of `XrmHelper.Data`. |
-| `src/commands/` | Command bar entry points (one file or folder per table; none yet). |
+| `src/helpers/` | `XrmHelper`: Data, Form, App, Field, Control, Lookup, Tab, Section, Grid, Event, UI, the fluent `FormModel`, and `runRecordCommand` (`command.ts`) for command buttons. |
+| `src/services/` | Web API access: `EntityService<T>("table")` and `executeCustomApi` on top of `XrmHelper.Data`. |
+| `src/commands/` | Command bar entry points, one folder per table (`supportTicket/`: resolve, reopen). |
 | `src/constants/` | Handwritten constants (publisher prefix, solution name, ...). |
 | `src/types/` | Handwritten shared types. Entity types come from `@ogz/crm-entities`. |
 
 New requirement: add an entry to the table's `rules/formRules.ts` or `rules/saveRules.ts`. Only when
 no ready-made rule fits, add a generic one to `src/rules/Rules.ts` or `src/rules/SaveRule.ts`.
+
+## Form helpers
+
+Every helper takes a column/control name or a `{ tab, section, field }` target. Value, requirement
+level, dirty state and submit mode belong to the column (one per form, however often it is placed); a
+section target only says which column. Visibility, disabled, label, focus, notifications, choice options
+and lookup filters belong to a control, so a section target changes only the control in that section.
+Anything not on the form is ignored: setters return `false`, getters `null`.
+
+```ts
+// Static helpers (used by the rule engine)
+Field.setRequired(formContext, { tab: "SUMMARY_TAB", section: "CONTACT", field: "telephone1" }, true);
+Control.setOptions(formContext, Fields.ogz_priority, [Priority.High, Priority.Critical]);
+
+// The same through the fluent FormModel (handler code)
+const form = FormModel(formContext);
+form.field(Fields.ogz_priority).getText();                       // "Critical"
+const contact = form.tab("SUMMARY_TAB").section("CONTACT");
+contact.field("telephone1").setRequired(true).setLabel("Mobile").focus();
+contact.getMissingRequired();                                    // ["telephone1"]
+form.field(Fields.ogz_category).setLookupFilter(`<filter>...</filter>`, "ogz_ticket_category");
+form.grid("notes_grid").refresh();
+```
 
 ## Build
 
