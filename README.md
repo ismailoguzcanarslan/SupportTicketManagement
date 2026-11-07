@@ -34,7 +34,9 @@ Plug-in flow: Dataverse event → plug-in class (registration attributes) → `B
 ├── src/
 │   ├── frontend/                          npm workspaces (TypeScript)
 │   │   ├── crm-entities/                  generated TS entity definitions
-│   │   └── crm-client/                    Web Resources: forms, helpers, rules
+│   │   ├── crm-ui/                        shared React + Fluent UI 2 building blocks, dialog protocol
+│   │   ├── crm-client/                    Web Resources: forms, commands, helpers, rules
+│   │   └── crm-pages/                     React dialog pages → HTML Web Resources
 │   ├── dataverse/                         code that runs inside Dataverse (net462)
 │   │   ├── SupportTicket.Base/            BasePlugin, PluginContext, registration attributes
 │   │   ├── SupportTicket.BusinessLogic/   business rules, no plug-in infrastructure
@@ -229,6 +231,13 @@ When no ready-made rule fits, add a generic one to `rules/Rules.ts` (form rules)
   exports become public, under `Ogz.Forms.<Name>` / `Ogz.Commands.<Name>`. `Xrm` is the platform's
   global and is never bundled. `crm-entities` is bundled from source, so Choice values are inlined and
   unused enums dropped.
+- **Dialog pages** (`crm-pages`, React 18 + Fluent UI 2 from `crm-ui`): every
+  `src/pages/<name>/index.tsx` becomes `ogz_/pages/<name>.html` + `.js`. A form script or command
+  opens one with `Dialogs.open(definition, input)` and gets `{ status: "succeeded" | "cancelled" |
+  "failed" }` back; the definitions (input and result types) are in `crm-client/src/dialogs`. The input
+  travels in the page URL (`data`), the result through `sessionStorage` under a request id, because
+  `navigateTo` returns no value for web resources. The page closes itself with `window.close()`; when
+  that does not work it tells the user to close it, and the opener still gets the result.
 
 ## Deployment Helper (DEV only)
 
@@ -362,11 +371,11 @@ of input).
 
 | Command (repo root) | What it does |
 | --- | --- |
-| `npm run test` | All frontend tests (`crm-entities`, `crm-client`): XrmHelper, rules, form scripts, bundles, type check. |
+| `npm run test` | All frontend tests (`crm-entities`, `crm-ui`, `crm-client`, `crm-pages`): XrmHelper, rules, form scripts, dialog pages, bundles, type check. |
 | `npm run test:watch` | Re-runs affected frontend tests on change. |
 | `npm run test:coverage` | Frontend tests with V8 coverage to `coverage/`. |
 | `npm run typecheck` | Strict type check of sources and tests. |
-| `npm run build` | Type check, then esbuild bundles to `src/frontend/crm-client/dist/webresources`. |
+| `npm run build` | Type check, then esbuild bundles to `src/frontend/crm-client/dist/webresources` and `src/frontend/crm-pages/dist/webresources`. |
 | `dotnet test tests/SupportTicket.PluginTests` | BusinessLogic, BasePlugin/PluginContext, registration attributes, plug-ins (net462, Windows). |
 | `dotnet test tests/SupportTicket.DeploymentHelperTests` | Manifest, build runner, planning, solution handling, FormXML, safety, Web Resource pipeline end to end (in memory). Builds SupportTicket.Plugins first. |
 | `dotnet test tests/SupportTicket.EntityGeneratorTests` | Generator menu parsing and contracts (offline). |

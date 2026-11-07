@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk">
+
+  <!--
+    Visual Studio project for the crm-ui npm workspace package (shared React + Fluent UI building blocks).
+    It is consumed from source, so "build" only type checks it. package.json and tsconfig.json stay the
+    source of truth. All files in the folder are included automatically.
+  -->
+  <PropertyGroup>
+    <!-- npm workspaces: dependencies are installed once at the repository root with `npm install`. -->
+    <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+    <BuildCommand>npm run typecheck</BuildCommand>
+  </PropertyGroup>
+
+</Project>

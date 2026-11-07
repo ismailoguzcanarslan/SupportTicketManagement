@@ -1,0 +1,10 @@
+{
+  // Type checks the tests together with the sources they use.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["./**/*", "../src/**/*"]
+}

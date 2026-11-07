@@ -14,6 +14,16 @@
       "name": "ogz_/commands/supportTicket.js",
       "file": "src/frontend/crm-client/dist/webresources/commands/supportTicket.js",
       "displayName": "Support Ticket command bar script"
+    },
+    {
+      "name": "ogz_/pages/reopenTicket.html",
+      "file": "src/frontend/crm-pages/dist/webresources/pages/reopenTicket.html",
+      "displayName": "Reopen Ticket dialog (page)"
+    },
+    {
+      "name": "ogz_/pages/reopenTicket.js",
+      "file": "src/frontend/crm-pages/dist/webresources/pages/reopenTicket.js",
+      "displayName": "Reopen Ticket dialog (script)"
     }
   ],
   "forms": [

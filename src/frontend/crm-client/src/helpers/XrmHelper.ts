@@ -10,6 +10,7 @@ import { App } from "./app.js";
 import { Control } from "./control.js";
 import { Data } from "./data.js";
 import { Diagnostics } from "./diagnostics.js";
+import { Dialogs } from "./dialogs.js";
 import { Event } from "./event.js";
 import { Field } from "./field.js";
 import { Form } from "./form.js";
@@ -19,9 +20,9 @@ import { Lookup } from "./lookup.js";
 import { Section, Tab } from "./tab.js";
 import { UI } from "./ui.js";
 
-export const XrmHelper = { App, Control, Data, Diagnostics, Event, Field, Form, FormModel, Grid, Lookup, Section, Tab, UI } as const;
+export const XrmHelper = { App, Control, Data, Diagnostics, Dialogs, Event, Field, Form, FormModel, Grid, Lookup, Section, Tab, UI } as const;
 
-export { App, Control, Data, Diagnostics, Event, Field, Form, FormModel, Grid, Lookup, Section, Tab, UI };
+export { App, Control, Data, Diagnostics, Dialogs, Event, Field, Form, FormModel, Grid, Lookup, Section, Tab, UI };
 export { Event as FormEvents };
 export { FormType } from "./form.js";
 export type { WebApiRecord } from "./data.js";

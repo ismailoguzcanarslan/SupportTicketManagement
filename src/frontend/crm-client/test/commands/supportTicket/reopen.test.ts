@@ -1,5 +1,5 @@
 import { ogz_support_ticket_statecode as State } from "@ogz/crm-entities";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import * as SupportTicketCommands from "../../../src/commands/supportTicket/index.js";
 import { ReopenTexts } from "../../../src/commands/supportTicket/reopen/reopen.js";
 import { getReopenBlocker, ReopenMessages } from "../../../src/commands/supportTicket/reopen/validation.js";
@@ -22,13 +22,26 @@ describe("getReopenBlocker", () => {
   });
 });
 
-function setup(stored: object = { statecode: State.Inactive }) {
+/** A saved, inactive ticket by default; the dialog page ends with `dialogResult` (null: closed with X). */
+function setup(stored: object = { statecode: State.Inactive }, dialogResult: object | null = { status: "succeeded", value: { reopenedOn: "2026-11-07T10:00:00Z" } }) {
   const xrm = installXrmMock();
+  const items = new Map<string, string>();
+  vi.stubGlobal("sessionStorage", {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => void items.set(key, value),
+    removeItem: (key: string) => void items.delete(key),
+  });
   vi.mocked(xrm.WebApi.retrieveRecord).mockResolvedValue(stored);
-  vi.mocked(xrm.Navigation.openConfirmDialog).mockResolvedValue({ confirmed: true });
+  vi.mocked(xrm.Navigation.navigateTo).mockImplementation((pageInput) => {
+    const { requestId } = JSON.parse((pageInput as { data: string }).data) as { requestId: string };
+    if (dialogResult !== null) items.set(`ogz_dialog_result_${requestId}`, JSON.stringify(dialogResult));
+    return Promise.resolve() as unknown as Xrm.Async.PromiseLike<never>;
+  });
   const formContext = createFormContextMock({ entityName: "ogz_support_ticket", entityId: `{${ID.toUpperCase()}}` });
   return { xrm, formContext };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("Ogz.Commands.SupportTicket.reopen", () => {
   it("uses the Custom API names shared with the server", () => {
@@ -40,39 +53,45 @@ describe("Ogz.Commands.SupportTicket.reopen", () => {
     });
   });
 
-  it("reads the stored state, asks, calls the Custom API on the ticket and refreshes", async () => {
+  it("reads the stored state, opens the Reopen Ticket dialog for the ticket and refreshes when it succeeded", async () => {
     const { xrm, formContext } = setup();
 
     expect(await SupportTicketCommands.reopen(formContext)).toBe("done");
 
     expect(xrm.WebApi.retrieveRecord).toHaveBeenCalledWith("ogz_support_ticket", ID, "?$select=statecode");
-    expect(xrm.Navigation.openConfirmDialog).toHaveBeenCalledWith({ text: ReopenTexts.confirm, title: ReopenTexts.title });
-    const request = vi.mocked(xrm.WebApi.online.execute).mock.calls[0]![0] as { entity: unknown; getMetadata(): { operationName: string } };
-    expect(request.entity).toEqual({ entityType: "ogz_support_ticket", id: ID });
-    expect(request.getMetadata().operationName).toBe("ogz_ReopenSupportTicket");
-    expect(xrm.WebApi.updateRecord).not.toHaveBeenCalled();
+    const pageInput = vi.mocked(xrm.Navigation.navigateTo).mock.calls[0]![0] as { webresourceName: string; data: string };
+    expect(pageInput.webresourceName).toBe("ogz_/pages/reopenTicket.html");
+    expect(JSON.parse(pageInput.data).input).toEqual({ ticketId: ID });
+    // The dialog page asks and calls the Custom API; the command itself does neither.
+    expect(xrm.Navigation.openConfirmDialog).not.toHaveBeenCalled();
+    expect(xrm.WebApi.online.execute).not.toHaveBeenCalled();
     expect(formContext.data.refresh).toHaveBeenCalledWith(false);
   });
 
-  it("does not call the Custom API for an active ticket", async () => {
+  it("changes nothing when the dialog was cancelled or closed", async () => {
+    const { formContext } = setup(undefined, null);
+
+    expect(await SupportTicketCommands.reopen(formContext)).toBe("cancelled");
+
+    expect(formContext.data.refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not open the dialog for an active ticket", async () => {
     const { xrm, formContext } = setup({ statecode: State.Active });
 
     expect(await SupportTicketCommands.reopen(formContext)).toBe("blocked");
 
     expect(xrm.Navigation.openAlertDialog).toHaveBeenCalledWith({ text: ReopenMessages.notInactive, title: ReopenTexts.title });
-    expect(xrm.WebApi.online.execute).not.toHaveBeenCalled();
+    expect(xrm.Navigation.navigateTo).not.toHaveBeenCalled();
   });
 
-  it("shows the server's reason when the Custom API rejects the call", async () => {
+  it("shows the reason when the dialog could not open", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { xrm, formContext } = setup();
-    vi.mocked(xrm.WebApi.online.execute).mockRejectedValueOnce({ message: "Only inactive tickets can be reopened." });
+    vi.mocked(xrm.Navigation.navigateTo).mockRejectedValueOnce({ message: "Web resource not found." });
 
     expect(await SupportTicketCommands.reopen(formContext)).toBe("failed");
 
-    expect(xrm.Navigation.openErrorDialog).toHaveBeenCalledWith({
-      message: ReopenTexts.failed,
-      details: "Only inactive tickets can be reopened.",
-    });
+    expect(xrm.Navigation.openErrorDialog).toHaveBeenCalledWith({ message: ReopenTexts.failed, details: "Web resource not found." });
   });
 });

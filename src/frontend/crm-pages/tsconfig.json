@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    // Pages call crm-client services, which use the Xrm typings.
+    "types": ["xrm"]
+  },
+  "include": ["src"]
+}

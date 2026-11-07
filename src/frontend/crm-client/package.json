@@ -15,10 +15,17 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@ogz/crm-entities": "0.1.0"
+    "@ogz/crm-entities": "0.1.0",
+    "@ogz/crm-ui": "0.1.0"
   },
   "devDependencies": {
     "@types/xrm": "^9.0.97",
     "esbuild": "~0.28.2"
+  },
+  "exports": {
+    "./services/*": "./src/services/*.ts",
+    "./constants/*": "./src/constants/*.ts",
+    "./dialogs/*": "./src/dialogs/*.ts",
+    "./helpers/*": "./src/helpers/*.ts"
   }
 }

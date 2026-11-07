@@ -9,9 +9,10 @@ export default defineConfig({
       provider: "v8",
       reportsDirectory: "coverage",
       reporter: ["text", "html", "lcov", "cobertura"],
-      include: ["src/frontend/*/src/**/*.ts"],
+      include: ["src/frontend/*/src/**/*.{ts,tsx}"],
       // Generated code is not handwritten and is not measured.
-      exclude: ["src/frontend/*/src/generated/**", "**/*.d.ts"],
+      // Page entries only mount the page; their bundles are built and checked by the crm-pages build tests.
+      exclude: ["src/frontend/*/src/generated/**", "**/*.d.ts", "src/frontend/crm-pages/src/pages/*/index.tsx"],
     },
   },
 });
