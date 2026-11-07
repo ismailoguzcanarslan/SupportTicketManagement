@@ -38,6 +38,16 @@ form.field(Fields.ogz_category).setLookupFilter(`<filter>...</filter>`, "ogz_tic
 form.grid("notes_grid").refresh();
 ```
 
+Rules re-run after a save and after a refresh (data OnLoad), not only on form load. `FieldDisabledRule`
+and `FieldRequiredRule` restore what the form designer configured when their condition no longer
+matches, so they never unlock a field that is read-only on the form or anything on a read-only form.
+A `SaveRule` can list the `saveModes` it runs on (e.g. not on `SaveMode.Deactivate`); "info" rules skip
+AutoSave by default.
+
+Rules and helpers skip whatever is not on the form. To see what was skipped (e.g. a mistyped tab or
+section name), run `localStorage.setItem("ogz_diagnostics", "1")` in the browser console and reload the
+form; `[ogz]` warnings appear in the console.
+
 ## Build
 
 `build.mjs` uses **esbuild** to bundle every entry point, together with everything it imports, into

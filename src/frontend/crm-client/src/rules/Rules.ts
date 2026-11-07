@@ -1,6 +1,7 @@
 // Built-in rules: generic and parameterized; entity-specific fields, values and messages belong in
 // forms/<entity>/rules. A rule whose source column is not on the form does nothing, and a target
-// that is not on the form is skipped, so one rule set works on every form of a table.
+// that is not on the form is skipped, so one rule set works on every form of a table. Turn on
+// Diagnostics (helpers/diagnostics.ts) to see in the console what was skipped.
 //
 // Targets:
 // - Control rules (visibility, disabled, field notification) take a ControlTarget: a column or
@@ -8,18 +9,29 @@
 //   the controls in one section only.
 // - Required level belongs to the column, not to a control, so FieldRequiredRule takes column names.
 //
+// What a rule does when its condition does not match:
+// - Visibility rules own the visibility of their targets: they show on a match and hide otherwise.
+// - FieldRequiredRule and FieldDisabledRule only add a constraint: otherwise they restore what the form
+//   designer configured. FieldDisabledRule therefore never unlocks a field that is read-only on the form,
+//   and never unlocks anything on a read-only form (e.g. an inactive record).
+//
 // Conflicts are not arbitrated: each rule sets its own state on every change of its column, so two
 // rules that set the same state on the same target overwrite each other. Configure one rule per
 // target and state (and one id per notification).
 
 import { Control, type ControlTarget, type SectionTarget } from "../helpers/control.js";
+import { Diagnostics } from "../helpers/diagnostics.js";
 import { Field } from "../helpers/field.js";
+import { FormType } from "../helpers/form.js";
 import { Section } from "../helpers/tab.js";
+import { describeTarget } from "../helpers/target.js";
 import { UI } from "../helpers/ui.js";
 import { matches, toList, type FormRule, type RuleCondition } from "./FormRule.js";
 
-// Required level of each column before any rule changed it, so rules can restore it.
+// Required level and disabled state as the form designer configured them, captured the first time a
+// rule changes them, so rules can restore them. Keyed by the column / control object.
 const originalRequiredLevels = new WeakMap<object, Xrm.Attributes.RequirementLevel>();
+const originalDisabled = new WeakMap<object, boolean>();
 
 function originalRequiredLevel(attribute: Xrm.Attributes.Attribute): Xrm.Attributes.RequirementLevel {
   let level = originalRequiredLevels.get(attribute);
@@ -30,9 +42,29 @@ function originalRequiredLevel(attribute: Xrm.Attributes.Attribute): Xrm.Attribu
   return level;
 }
 
-function whenFieldPresent<T>(field: string, apply: (formContext: Xrm.FormContext, isMatch: boolean) => void, condition: RuleCondition<T>) {
+function originalDisabledState(control: Xrm.Controls.StandardControl): boolean {
+  let disabled = originalDisabled.get(control);
+  if (disabled === undefined) {
+    disabled = control.getDisabled();
+    originalDisabled.set(control, disabled);
+  }
+  return disabled;
+}
+
+/** Read-only and disabled forms (e.g. an inactive record): nothing on them may be unlocked. */
+const isReadOnlyForm = (formContext: Xrm.FormContext): boolean => {
+  const formType = formContext.ui.getFormType();
+  return formType === FormType.ReadOnly || formType === FormType.Disabled;
+};
+
+function whenFieldPresent<T>(
+  rule: string,
+  field: string,
+  apply: (formContext: Xrm.FormContext, isMatch: boolean) => void,
+  condition: RuleCondition<T>,
+) {
   return (formContext: Xrm.FormContext): void => {
-    if (!Field.exists(formContext, field)) return;
+    if (!Diagnostics.reportMissing(Field.exists(formContext, field), `source column '${field}'`, rule)) return;
     apply(formContext, matches(Field.getValue<T>(formContext, field), condition));
   };
 }
@@ -40,15 +72,20 @@ function whenFieldPresent<T>(field: string, apply: (formContext: Xrm.FormContext
 const toTargets = (targets: ControlTarget | readonly ControlTarget[]): readonly ControlTarget[] =>
   Array.isArray(targets) ? targets : [targets as ControlTarget];
 
+const reportTarget = (found: boolean, target: ControlTarget, rule: string): boolean =>
+  Diagnostics.reportMissing(found, `target '${describeTarget(target)}'`, rule);
+
 /** Shows a section while `field` matches `visibleWhen`, hides it otherwise. */
 export function SectionSpecificVisibilityRule<T>(options: SectionTarget & {
   field: string;
   visibleWhen: RuleCondition<T>;
 }): FormRule {
+  const rule = `SectionSpecificVisibilityRule(${options.field})`;
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
-      Section.setVisible(formContext, options.tab, options.section, isMatch);
+    apply: whenFieldPresent(rule, options.field, (formContext, isMatch) => {
+      const found = Section.setVisible(formContext, options.tab, options.section, isMatch);
+      Diagnostics.reportMissing(found, `section '${options.tab}/${options.section}'`, rule);
     }, options.visibleWhen),
   };
 }
@@ -59,10 +96,11 @@ export function FieldVisibilityRule<T>(options: {
   field: string;
   visibleWhen: RuleCondition<T>;
 }): FormRule {
+  const rule = `FieldVisibilityRule(${options.field})`;
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
-      toTargets(options.targets).forEach((target) => Control.setVisible(formContext, target, isMatch));
+    apply: whenFieldPresent(rule, options.field, (formContext, isMatch) => {
+      toTargets(options.targets).forEach((target) => reportTarget(Control.setVisible(formContext, target, isMatch), target, rule));
     }, options.visibleWhen),
   };
 }
@@ -78,14 +116,15 @@ export function FieldRequiredRule<T>(options: {
   level?: Exclude<Xrm.Attributes.RequirementLevel, "none">;
 }): FormRule {
   const level = options.level ?? "required";
+  const rule = `FieldRequiredRule(${options.field})`;
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
+    apply: whenFieldPresent(rule, options.field, (formContext, isMatch) => {
       for (const target of toList(options.targets)) {
         const attribute = Field.get(formContext, target);
-        if (attribute === null) continue;
-        const original = originalRequiredLevel(attribute);
-        attribute.setRequiredLevel(isMatch ? level : original);
+        if (!reportTarget(attribute !== null, target, rule)) continue;
+        const original = originalRequiredLevel(attribute!);
+        attribute!.setRequiredLevel(isMatch ? level : original);
       }
     }, options.requiredWhen),
   };
@@ -105,7 +144,7 @@ export function FormNotificationRule<T>(options: {
   const level = options.level ?? "INFO";
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
+    apply: whenFieldPresent(`FormNotificationRule(${options.id})`, options.field, (formContext, isMatch) => {
       if (isMatch) UI.setFormNotification(formContext, options.message, level, options.id);
       else UI.clearFormNotification(formContext, options.id);
     }, options.showWhen),
@@ -130,25 +169,41 @@ export function FieldNotificationRule<T>(options: {
   level?: Xrm.Controls.NotificationLevel;
 }): FormRule {
   const level = options.level ?? "RECOMMENDATION";
+  const rule = `FieldNotificationRule(${options.id})`;
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
-      if (isMatch) Control.setNotification(formContext, options.target, options.message, options.id, level);
-      else Control.clearNotification(formContext, options.target, options.id);
+    apply: whenFieldPresent(rule, options.field, (formContext, isMatch) => {
+      const found = isMatch
+        ? Control.setNotification(formContext, options.target, options.message, options.id, level)
+        : Control.clearNotification(formContext, options.target, options.id);
+      reportTarget(found, options.target, rule);
     }, options.showWhen),
   };
 }
 
-/** Disables the target controls while `field` matches `disabledWhen`, enables them otherwise. */
+/**
+ * Disables the target controls while `field` matches `disabledWhen`. Otherwise each control goes back to
+ * the state the form designer gave it, so a field that is read-only on the form stays read-only; on a
+ * read-only form (e.g. an inactive record) nothing is ever unlocked.
+ */
 export function FieldDisabledRule<T>(options: {
   targets: ControlTarget | readonly ControlTarget[];
   field: string;
   disabledWhen: RuleCondition<T>;
 }): FormRule {
+  const rule = `FieldDisabledRule(${options.field})`;
   return {
     dependsOn: [options.field],
-    apply: whenFieldPresent(options.field, (formContext, isMatch) => {
-      toTargets(options.targets).forEach((target) => Control.setDisabled(formContext, target, isMatch));
+    apply: whenFieldPresent(rule, options.field, (formContext, isMatch) => {
+      const readOnlyForm = isReadOnlyForm(formContext);
+      for (const target of toTargets(options.targets)) {
+        const controls = Control.resolve(formContext, target);
+        if (!reportTarget(controls.length > 0, target, rule)) continue;
+        for (const control of controls) {
+          const original = originalDisabledState(control);
+          control.setDisabled(isMatch || original || readOnlyForm);
+        }
+      }
     }, options.disabledWhen),
   };
 }

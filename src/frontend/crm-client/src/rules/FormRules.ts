@@ -1,5 +1,5 @@
-// Runs a rule set on a form: applies every rule on load and re-applies the affected rules when a
-// column they depend on changes.
+// Runs a rule set on a form: applies every rule on load and whenever the form data loads again (after a
+// save or refresh), and re-applies the affected rules when a column they depend on changes.
 
 import { Event } from "../helpers/event.js";
 import { Form } from "../helpers/form.js";
@@ -63,9 +63,18 @@ export const FormRules = {
 
     rules.forEach((rule) => applySafely(rule, formContext));
 
+    // The form OnLoad event does not run again after a save (e.g. a new record becoming an existing one)
+    // or a refresh, but the data and the form state change; apply every rule again then.
+    const onDataLoad: Xrm.Events.DataLoadEventHandler = (context) => {
+      const loadedForm = context.getFormContext();
+      rules.forEach((rule) => applySafely(rule, loadedForm));
+    };
+    Event.registerOnDataLoad(formContext, onDataLoad);
+
     const dispose = (): void => {
       handlers.forEach((handler, column) => Event.unregisterOnChange(formContext, column, handler));
       handlers.clear();
+      Event.unregisterOnDataLoad(formContext, onDataLoad);
       active.delete(formContext.data.entity);
     };
     active.set(formContext.data.entity, dispose);

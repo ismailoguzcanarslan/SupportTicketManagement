@@ -307,6 +307,12 @@ export function createFormContextMock(options: FormContextMockOptions = {}): Xrm
   const controlCollection = createItemCollectionMock(controls, (control) => control.getName());
   const formNotifications = new Map<string, { message: string; level: Xrm.FormNotificationLevel }>();
   const saveHandlers: Xrm.Events.SaveEventHandler[] = [];
+  const postSaveHandlers: Xrm.Events.PostSaveEventHandler[] = [];
+  const dataLoadHandlers: Xrm.Events.DataLoadEventHandler[] = [];
+  const remove = <T>(list: T[], item: T) => {
+    const index = list.indexOf(item);
+    if (index >= 0) list.splice(index, 1);
+  };
 
   const tabs = Object.entries(options.tabs ?? {}).map(([tabName, tab]) => {
     const sections = Object.entries(tab.sections ?? {}).map(([sectionName, section]) =>
@@ -338,6 +344,12 @@ export function createFormContextMock(options: FormContextMockOptions = {}): Xrm
     }),
     /** Test helper (not part of the Client API): handlers registered with addOnSave. */
     saveHandlers,
+    addOnPostSave: vi.fn((handler: Xrm.Events.PostSaveEventHandler) => {
+      postSaveHandlers.push(handler);
+    }),
+    removeOnPostSave: vi.fn((handler: Xrm.Events.PostSaveEventHandler) => remove(postSaveHandlers, handler)),
+    /** Test helper (not part of the Client API): handlers registered with addOnPostSave. */
+    postSaveHandlers,
     getEntityName: vi.fn(() => entityName),
     getId: vi.fn(() => entityId),
     getEntityReference: vi.fn(() => ({ entityType: entityName, id: entityId, name: "" })),
@@ -354,6 +366,12 @@ export function createFormContextMock(options: FormContextMockOptions = {}): Xrm
       refresh: vi.fn(() => Promise.resolve()),
       save: vi.fn(() => Promise.resolve()),
       isValid: vi.fn(() => true),
+      addOnLoad: vi.fn((handler: Xrm.Events.DataLoadEventHandler) => {
+        dataLoadHandlers.push(handler);
+      }),
+      removeOnLoad: vi.fn((handler: Xrm.Events.DataLoadEventHandler) => remove(dataLoadHandlers, handler)),
+      /** Test helper (not part of the Client API): handlers registered with data.addOnLoad. */
+      dataLoadHandlers,
     },
     ui: {
       getFormType: vi.fn(() => options.formType ?? FormType.Update),
@@ -445,6 +463,16 @@ export function simulateUserSave(formContext: Xrm.FormContext, onSave: (context:
   const context = createSaveEventContextMock(rewrapFormContext(formContext));
   onSave(context);
   return { handlerRan: true, saved: !context.getEventArgs().isDefaultPrevented() };
+}
+
+/**
+ * Simulates the form data loading again (after a save or refresh): runs the data OnLoad handlers with a
+ * fresh formContext object, as Dataverse does.
+ */
+export function fireDataLoad(formContext: Xrm.FormContext): void {
+  const handlers = (formContext.data as unknown as { dataLoadHandlers: Xrm.Events.DataLoadEventHandler[] }).dataLoadHandlers;
+  const context = createEventContextMock(rewrapFormContext(formContext)) as unknown as Xrm.Events.DataLoadEventContext;
+  [...handlers].forEach((handler) => handler(context));
 }
 
 /** OnSave context whose event arguments remember preventDefault(), like the real save event. */

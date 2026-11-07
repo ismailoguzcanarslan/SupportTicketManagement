@@ -10,6 +10,21 @@ import { isEmpty, matches, type RuleCondition } from "./FormRule.js";
  */
 export type SaveRuleSeverity = "error" | "info";
 
+/** Values of getEventArgs().getSaveMode() (XrmEnum.SaveMode; ambient const enums cannot be used here). */
+export const SaveMode = {
+  Save: 1,
+  SaveAndClose: 2,
+  Deactivate: 5,
+  Reactivate: 6,
+  Send: 7,
+  Disqualify: 15,
+  Qualify: 16,
+  Assign: 47,
+  SaveAsCompleted: 58,
+  SaveAndNew: 59,
+  AutoSave: 70,
+} as const;
+
 export interface SaveValidationError {
   /** Column the error belongs to; its controls get a field notification. */
   readonly field?: string;
@@ -30,6 +45,14 @@ export interface SaveRule {
 
   /** Default "error": a failing rule blocks the save. "info" shows its messages and lets the save go on. */
   readonly severity?: SaveRuleSeverity;
+
+  /**
+   * Save modes (SaveMode) the rule runs on; on any other save it is skipped and keeps the messages it
+   * shows. Default: every save, except that "info" rules skip AutoSave (a tip should not pop up while the
+   * user is typing). "error" rules run on AutoSave by default, so autosave never stores invalid data;
+   * exclude modes only where that is intended, e.g. a rule that must not block Deactivate.
+   */
+  readonly saveModes?: readonly number[];
 
   /** Checks the current form state. Must be synchronous and must not change the form. */
   validate(formContext: Xrm.FormContext): SaveValidationResult;

@@ -1,6 +1,7 @@
 // Runs SaveRules in the form's OnSave event: shows one notification per error, clears notifications
 // of errors that are gone, and cancels the save (preventDefault) while any rule of severity "error"
-// fails. Rules of severity "info" only show their messages; the save goes on.
+// fails. Rules of severity "info" only show their messages; the save goes on. A rule runs on the save
+// modes it lists (SaveRule.saveModes); by default on every save, "info" rules not on AutoSave.
 //
 // Two Dataverse behaviours shape this:
 // - An error notification on a control (setNotification) blocks the save by itself, before OnSave
@@ -14,7 +15,7 @@ import { Control } from "../helpers/control.js";
 import { Field } from "../helpers/field.js";
 import { UI } from "../helpers/ui.js";
 import type { FormRule } from "./FormRule.js";
-import type { SaveRule, SaveRuleSeverity, SaveValidationError } from "./SaveRule.js";
+import { SaveMode, type SaveRule, type SaveRuleSeverity, type SaveValidationError } from "./SaveRule.js";
 
 const NOTIFICATION_PREFIX = "ogz_save_";
 
@@ -35,6 +36,15 @@ export interface SaveValidationOutcome {
   readonly isValid: boolean;
   /** Every message, of both severities. */
   readonly errors: readonly RuleError[];
+  /** Ids of the rules that did not run for this save mode (see SaveRule.saveModes). */
+  readonly skipped?: readonly string[];
+}
+
+/** Whether the rule runs on a save of this mode; without a mode (e.g. revalidation) every rule runs. */
+function runsOn(rule: SaveRule, saveMode: number | undefined): boolean {
+  if (saveMode === undefined) return true;
+  if (rule.saveModes !== undefined) return rule.saveModes.includes(saveMode);
+  return !(rule.severity === "info" && saveMode === SaveMode.AutoSave);
 }
 
 // Notifications currently shown, by notification id. One form runs in a script frame at a time, and
@@ -55,11 +65,19 @@ function clear(formContext: Xrm.FormContext, id: string, notification: ShownNoti
 }
 
 export const SaveRules = {
-  /** Evaluates every rule (even after a failure) and collects all errors. Does not touch the UI. */
-  validate(formContext: Xrm.FormContext, rules: readonly SaveRule[]): SaveValidationOutcome {
+  /**
+   * Evaluates every rule (even after a failure) and collects all errors. Does not touch the UI. With a
+   * `saveMode`, rules that do not run on it are skipped (see SaveRule.saveModes).
+   */
+  validate(formContext: Xrm.FormContext, rules: readonly SaveRule[], saveMode?: number): SaveValidationOutcome {
     const errors: RuleError[] = [];
+    const skipped: string[] = [];
 
     for (const rule of rules) {
+      if (!runsOn(rule, saveMode)) {
+        skipped.push(rule.id);
+        continue;
+      }
       let ruleErrors: readonly SaveValidationError[];
       let severity: SaveRuleSeverity = rule.severity ?? "error";
       try {
@@ -74,27 +92,31 @@ export const SaveRules = {
         errors.push({ ...error, ruleId: rule.id, severity, notificationId: `${NOTIFICATION_PREFIX}${rule.id}${index === 0 ? "" : `_${index}`}` }));
     }
 
-    return { isValid: !errors.some((e) => e.severity === "error"), errors };
+    const outcome = { isValid: !errors.some((e) => e.severity === "error"), errors };
+    return skipped.length > 0 ? { ...outcome, skipped } : outcome;
   },
 
   /**
-   * OnSave handler body: validates, updates notifications and calls preventDefault() when any rule
-   * of severity "error" fails. Returns true when the save may continue.
+   * OnSave handler body: validates the rules that run on this save mode, updates notifications and calls
+   * preventDefault() when any rule of severity "error" fails. Returns true when the save may continue.
    */
   handle(executionContext: Xrm.Events.SaveEventContext, rules: readonly SaveRule[]): boolean {
     const formContext = executionContext.getFormContext();
-    const outcome = SaveRules.validate(formContext, rules);
+    const outcome = SaveRules.validate(formContext, rules, executionContext.getEventArgs().getSaveMode());
 
-    SaveRules.showNotifications(formContext, outcome.errors);
+    SaveRules.showNotifications(formContext, outcome.errors, outcome.skipped);
     if (!outcome.isValid) executionContext.getEventArgs().preventDefault();
     return outcome.isValid;
   },
 
-  /** Shows each error once (same id replaces) and clears notifications of errors that are gone. */
-  showNotifications(formContext: Xrm.FormContext, errors: readonly RuleError[]): void {
+  /**
+   * Shows each error once (same id replaces) and clears notifications of errors that are gone. Rules in
+   * `keep` (skipped on this save) keep the notifications they show.
+   */
+  showNotifications(formContext: Xrm.FormContext, errors: readonly RuleError[], keep: readonly string[] = []): void {
     const current = new Set(errors.map((e) => e.notificationId));
     for (const [id, notification] of [...shown]) {
-      if (!current.has(id)) clear(formContext, id, notification);
+      if (!current.has(id) && !keep.includes(notification.ruleId)) clear(formContext, id, notification);
     }
 
     for (const error of errors) {
